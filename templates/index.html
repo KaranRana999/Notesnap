@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Notes Summarizer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
+        h1 { font-size: 2.5rem; margin-bottom: 10px; color: #7c3aed; }
+        p.subtitle { color: #888; margin-bottom: 30px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 8px 24px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #888; cursor: pointer; }
+        .tab.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+        textarea { width: 100%; max-width: 700px; height: 200px; padding: 15px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: #fff; font-size: 1rem; resize: none; outline: none; }
+        .file-upload { width: 100%; max-width: 700px; height: 120px; border: 2px dashed #333; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #888; cursor: pointer; background: #1a1a1a; }
+        .file-upload:hover { border-color: #7c3aed; color: #7c3aed; }
+        input[type="file"] { display: none; }
+        .word-count { color: #888; font-size: 0.85rem; margin-top: 8px; max-width: 700px; width: 100%; text-align: right; }
+        button { margin-top: 15px; padding: 12px 40px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #6d28d9; }
+        #result { margin-top: 30px; max-width: 700px; width: 100%; background: #1a1a1a; border-radius: 10px; padding: 20px; border: 1px solid #333; display: none; }
+        #result h2 { color: #7c3aed; margin-bottom: 10px; }
+        #summary-text { color: #ccc; line-height: 1.6; }
+        .result-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .copy-btn { padding: 6px 16px; background: transparent; border: 1px solid #7c3aed; color: #7c3aed; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+        .copy-btn:hover { background: #7c3aed; color: white; }
+        #loading { display: none; color: #888; margin-top: 15px; }
+        #filename { color: #7c3aed; margin-top: 10px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>AI Notes Summarizer</h1>
+    <p class="subtitle">Paste your notes or upload a file and get an instant AI summary</p>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('text')">Paste Text</div>
+        <div class="tab" onclick="switchTab('file')">Upload File</div>
+    </div>
+
+    <div id="text-section">
+        <textarea id="inputText" placeholder="Paste your notes here..." oninput="updateWordCount()"></textarea>
+        <p class="word-count" id="word-count">0 words</p>
+    </div>
+
+    <div id="file-section" style="display:none;">
+        <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+            <p>Click to upload .txt or .pdf file</p>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,.pdf" onchange="showFilename()">
+        <p id="filename"></p>
+    </div>
+
+    <button onclick="summarize()">Summarize</button>
+    <p id="loading">⏳ Summarizing... this may take a moment</p>
+
+    <div id="result">
+        <h2>Summary</h2>
+        <p id="summary-text"></p>
+        <div class="result-footer">
+            <small id="summary-word-count" style="color:#888;"></small>
+            <button class="copy-btn" onclick="copySummary()">Copy Summary</button>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (tab === 'text') {
+                document.getElementById('text-section').style.display = 'block';
+                document.getElementById('file-section').style.display = 'none';
+                document.querySelectorAll('.tab')[0].classList.add('active');
+            } else {
+                document.getElementById('text-section').style.display = 'none';
+                document.getElementById('file-section').style.display = 'block';
+                document.querySelectorAll('.tab')[1].classList.add('active');
+            }
+        }
+
+        function updateWordCount() {
+            const text = document.getElementById('inputText').value;
+            const count = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            document.getElementById('word-count').textContent = count + ' words';
+        }
+
+        function showFilename() {
+            const file = document.getElementById('fileInput').files[0];
+            document.getElementById('filename').textContent = '📄 ' + file.name;
+        }
+
+        async function summarize() {
+            const activeTab = document.querySelector('.tab.active').textContent;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            let response;
+
+            if (activeTab === 'Paste Text') {
+                const text = document.getElementById('inputText').value;
+                if (!text.trim()) { alert('Please enter some text!'); document.getElementById('loading').style.display = 'none'; return; }
+                response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+            } else {
+                const file = document.getElementById('fileInput').files[0];
+                if (!file) { alert('Please upload a file!'); document.getElementById('loading').style.display = 'none'; return; }
+                const formData = new FormData();
+                formData.append('file', file);
+                response = await fetch('/summarize', { method: 'POST', body: formData });
+            }
+
+            const data = await response.json();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('summary-text').textContent = data.summary;
+            const wordCount = data.summary.trim().split(/\s+/).length;
+            document.getElementById('summary-word-count').textContent = 'Summary: ' + wordCount + ' words';
+        }
+
+        function copySummary() {
+            const text = document.getElementById('summary-text').textContent;
+            navigator.clipboard.writeText(text);
+            document.querySelector('.copy-btn').textContent = 'Copied!';
+            setTimeout(() => document.querySelector('.copy-btn').textContent = 'Copy Summary', 2000);
+        }
+    </script>
+</body>
+</html>
