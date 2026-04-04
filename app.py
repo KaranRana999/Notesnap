@@ -1,13 +1,14 @@
 import os
-os.environ["HF_HOME"] = "E:\\huggingface_cache"
-
 from flask import Flask, request, jsonify, render_template
-from transformers import pipeline
+from groq import Groq
 import PyPDF2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 @app.route("/")
 def home():
@@ -32,19 +33,23 @@ def summarize():
     if not text.strip():
         return jsonify({"error": "No text found"}), 400
 
-    # Split text if too long
-    max_chunk = 1000
-    words = text.split()
-    chunks = [" ".join(words[i:i+max_chunk]) for i in range(0, len(words), max_chunk)]
-     
-    summary = ""
-    for chunk in chunks:
-        result = summarizer(chunk, max_length=130, min_length=30, do_sample=False)
-        summary += result[0]["summary_text"] + " "
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an academic summarizer. Summarize the given text concisely and clearly in simple English. Focus on the key points only."
+            },
+            {
+                "role": "user",
+                "content": f"Summarize this:\n\n{text}"
+            }
+        ],
+        model="llama-3.3-70b-versatile",
+    )
+
+    summary = chat_completion.choices[0].message.content
 
     return jsonify({"summary": summary.strip()})
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")
-
-
