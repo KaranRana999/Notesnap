@@ -1,5 +1,0 @@
-miniproject_env/
-__pycache__/
-*.pyc
-huggingface_cache/
-.env
