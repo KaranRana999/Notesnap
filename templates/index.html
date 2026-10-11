@@ -6,6 +6,7 @@
     <title>QuickBrief</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        .number{font-family: Arial, background-color= #0f030f }
         body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
         h1 { font-size: 2.5rem; margin-bottom: 10px; color: #3aa5ed; }
         p.subtitle { color: #888; margin-bottom: 30px; }
@@ -42,6 +43,7 @@
         <textarea id="inputText" placeholder="Paste your notes here..." oninput="updateWordCount()"></textarea>
         <p class="word-count" id="word-count">0 words</p>
     </div>
+    
 
     <div id="file-section" style="display:none;">
         <div class="file-upload" onclick="document.getElementById('fileInput').click()">

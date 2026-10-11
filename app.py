@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify, render_template
-from groq import Groq
+import google.generativeai as genai
 import PyPDF2
 from dotenv import load_dotenv
 
@@ -8,7 +8,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-3.5-flash")
 
 @app.route("/")
 def home():
@@ -33,21 +34,10 @@ def summarize():
     if not text.strip():
         return jsonify({"error": "No text found"}), 400
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an academic summarizer. Summarize the given text concisely and clearly in simple English. Focus on the key points only."
-            },
-            {
-                "role": "user",
-                "content": f"Summarize this:\n\n{text}"
-            }
-        ],
-        model="llama-3.3-70b-versatile",
-    )
+    prompt = f"You are an academic summarizer. Summarize the following text concisely and clearly in simple English. Focus on key points only.\n\n{text}"
 
-    summary = chat_completion.choices[0].message.content
+    response = model.generate_content(prompt)
+    summary = response.text
 
     return jsonify({"summary": summary.strip()})
 
